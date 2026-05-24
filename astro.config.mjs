@@ -7,16 +7,18 @@ import sitemap from '@astrojs/sitemap';
 
 // https://astro.build/config
 export default defineConfig({
-  // output: 'static' is the default — all pages prerendered at build time.
-  // Keystatic admin UI (/keystatic) is only available during `npm run dev`.
-  // The static build (npm run build) excludes it, producing a pure static site
-  // that deploys for free on GitHub Pages.
+  // Force a completely static output for GitHub Pages
+  output: 'static', 
+  
   integrations: [
     react(),
     markdoc(),
-    keystatic(),
-    tailwind({ applyBaseStyles: false }), // base styles handled in src/styles.css
+    // Pass the prerender flag so Keystatic doesn't require a server adapter
+    keystatic({
+      prerender: true
+    }),
+    tailwind({ applyBaseStyles: false }), 
     sitemap(),
   ],
-  site: 'https://evergreenarchaeology.com', // update to your GitHub Pages URL if needed
+  site: 'https://evergreenarchaeology.com', 
 });
