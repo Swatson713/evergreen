@@ -1,0 +1,399 @@
+---
+/**
+ * Layout.astro — Global shell for Evergreen Archaeology
+ *
+ * Props:
+ *   title       : string   — page title (appended with firm name)
+ *   description : string?  — meta description for SEO
+ *   image       : string?  — OG image URL for social sharing
+ *   cvHref      : string?  — pass the resume PDF path to show CV links;
+ *                            omit (or pass undefined) to hide them entirely
+ */
+import '../styles.css';
+import { createReader } from '@keystatic/core/reader';
+import keystaticConfig from '../../keystatic.config';
+
+export interface Props {
+  title: string;
+  description?: string;
+  image?: string;
+  cvHref?: string;
+}
+
+const {
+  title,
+  description = 'Evergreen Archaeology provides professional Cultural Resource Management and archaeological consulting services throughout the Pacific Northwest.',
+  image,
+  cvHref,
+} = Astro.props;
+
+// If cvHref wasn't passed by the page, fall back to reading it ourselves.
+// This keeps the nav/footer CV link accurate on every page (projects, 404, etc.)
+// without every page needing to thread the prop manually.
+let resolvedCvHref = cvHref;
+let footerEmail = 'info@evergreenarchaeology.com';
+let footerAddress = 'Pacific Northwest, USA';
+let defaultOgImage = image; // start with whatever the page passed in
+try {
+  const reader = createReader(process.cwd(), keystaticConfig);
+  if (!resolvedCvHref) {
+    const resumeData = await reader.singletons.resume.read();
+    resolvedCvHref = resumeData?.cvFile ?? undefined;
+  }
+  const contactData = await reader.singletons.contact.read();
+  footerEmail   = contactData?.email   ?? footerEmail;
+  footerAddress = contactData?.address ?? footerAddress;
+  // Use the Keystatic-managed OG image as fallback when no page-level image was passed
+  const homeData = await reader.singletons.home.read();
+  if (!image && homeData?.defaultOgImage) {
+    defaultOgImage = homeData.defaultOgImage;
+  }
+} catch {
+  // Silently ignore — fall back to defaults
+}
+
+const canonicalURL = new URL(Astro.url.pathname, Astro.site ?? 'https://evergreenarchaeology.com');
+
+// Active-link logic:
+//  - Hash-anchor links (/#services, /#about, /#contact) are section scroll
+//    targets on the homepage — they have NO "current page" state. Only a
+//    real route (/projects) or the exact root (/) can be "active."
+//  - This prevents Services / About / Contact from all lighting up at once
+//    when the user is on the homepage.
+const pathname = Astro.url.pathname.replace(/\/$/, '') || '/'; // normalise trailing slash
+
+const navLinks = [
+  { href: '/',          label: 'Home',     isPage: true  },
+  { href: '/#services', label: 'Services', isPage: false },
+  { href: '/projects',  label: 'Projects', isPage: true  },
+  { href: '/#about',    label: 'About',    isPage: false },
+  { href: '/#contact',  label: 'Contact',  isPage: false },
+];
+
+// Returns true only for real page links, and only when the path matches.
+function isActive(href: string, isPage: boolean): boolean {
+  if (!isPage) return false;                        // section anchors: never active
+  if (href === '/') return pathname === '/';         // home: exact match only
+  return pathname === href || pathname.startsWith(href + '/'); // /projects or /projects/slug
+}
+---
+
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalURL} />
+
+    <!-- Open Graph / Social -->
+    <meta property="og:type"        content="website" />
+    <meta property="og:url"         content={canonicalURL} />
+    <meta property="og:title"       content={`${title} | Evergreen Archaeology`} />
+    <meta property="og:description" content={description} />
+    {defaultOgImage && <meta property="og:image" content={defaultOgImage} />}
+    <meta name="twitter:card"       content="summary_large_image" />
+
+    <!-- Schema.org structured data — drives rich results in Google Search -->
+    <!-- Values are pulled from Keystatic contact/about singletons at build time -->
+    <script type="application/ld+json" set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "ProfessionalService",
+      "name": "Evergreen Archaeology",
+      "description": description,
+      "url": canonicalURL.origin,
+      "email": footerEmail,
+      "address": {
+        "@type": "PostalAddress",
+        "addressRegion": "WA",
+        "addressCountry": "US",
+        "description": footerAddress
+      },
+      "areaServed": {
+        "@type": "GeoRegion",
+        "name": "Pacific Northwest, USA"
+      },
+      "knowsAbout": [
+        "Cultural Resource Management",
+        "Archaeological Survey",
+        "Section 106 Compliance",
+        "NHPA Consulting",
+        "NEPA Consulting",
+        "Phase I Survey",
+        "Phase III Data Recovery",
+        "Archaeological Monitoring"
+      ],
+      "sameAs": []
+    })} />
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title} | Evergreen Archaeology</title>
+
+    <!-- Google Fonts — Inter (body) + Playfair Display (headings) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+
+  <body class="bg-stone-50 text-stone-800 font-sans antialiased">
+
+    <!-- ═══════════════════════════════════════════════════
+         HEADER / NAVIGATION
+         ═══════════════════════════════════════════════════ -->
+    <header
+      id="site-header"
+      class="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-stone-200 shadow-sm transition-shadow duration-300"
+    >
+      <nav
+        class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
+        aria-label="Primary navigation"
+      >
+        <div class="flex items-center justify-between h-16">
+
+          <!-- ── Wordmark / Logo ─────────────────────────── -->
+          <a
+            href="/"
+            class="flex items-center gap-2.5 group shrink-0"
+            aria-label="Evergreen Archaeology — home"
+          >
+            <!-- Leaf / trowel icon mark -->
+            <span class="flex items-center justify-center w-9 h-9 rounded-sm bg-[#294523] text-green-100 group-hover:bg-[#325629] transition-colors">
+              <svg
+                width="20" height="20" viewBox="0 0 20 20"
+                fill="currentColor" aria-hidden="true"
+              >
+                <!-- Stylised leaf + soil-layer lines -->
+                <path d="M10 1.5C6.96 1.5 4.5 4.46 4.5 8.25c0 2.93 1.72 5.44 4.25 6.52V17h2.5v-2.23c2.53-1.08 4.25-3.59 4.25-6.52C15.5 4.46 13.04 1.5 10 1.5z"/>
+                <rect x="4" y="18" width="12" height="1.2" rx="0.6"/>
+              </svg>
+            </span>
+            <span class="font-serif font-semibold text-base text-stone-900 leading-tight group-hover:text-[#294523] transition-colors">
+              Evergreen<br class="hidden sm:block" />
+              <span class="font-normal text-stone-500 text-sm">Archaeology</span>
+            </span>
+          </a>
+
+          <!-- ── Desktop nav links ──────────────────────── -->
+          <ul class="hidden md:flex items-center gap-0.5" role="list">
+            {navLinks.map(({ href, label, isPage }) => (
+              <li>
+                <a
+                  href={href}
+                  class={isActive(href, isPage) ? 'nav-link-active' : 'nav-link'}
+                  aria-current={isActive(href, isPage) ? 'page' : undefined}
+                >
+                  {label}
+                </a>
+              </li>
+            ))}
+          </ul>
+
+          <!-- ── CTA: Download CV (desktop) — hidden until PDF uploaded ── -->
+          {resolvedCvHref && (
+            <a
+              href={resolvedCvHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="hidden lg:inline-flex items-center gap-1.5 text-sm font-medium text-[#294523] border border-[#294523] hover:bg-[#294523] hover:text-white px-4 py-2 rounded-sm transition-colors duration-200"
+              aria-label="Download CV PDF"
+            >
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/>
+              </svg>
+              Download CV
+            </a>
+          )}
+
+          <!-- ── Mobile hamburger ────────────────────────── -->
+          <button
+            id="mobile-menu-btn"
+            type="button"
+            class="md:hidden p-2 rounded-sm text-stone-500 hover:text-[#294523] hover:bg-stone-100 transition-colors"
+            aria-label="Open navigation menu"
+            aria-expanded="false"
+            aria-controls="mobile-menu"
+          >
+            <svg id="icon-open"  class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+            <svg id="icon-close" class="w-6 h-6 hidden" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- ── Mobile menu panel ──────────────────────────── -->
+        <div
+          id="mobile-menu"
+          class="hidden md:hidden border-t border-stone-100 pb-4 pt-2"
+          role="dialog"
+          aria-label="Mobile navigation"
+        >
+          <ul class="flex flex-col gap-0.5" role="list">
+            {navLinks.map(({ href, label, isPage }) => (
+              <li>
+                <a
+                  href={href}
+                  class={`block ${isActive(href, isPage) ? 'nav-link-active' : 'nav-link'}`}
+                  aria-current={isActive(href, isPage) ? 'page' : undefined}
+                >
+                  {label}
+                </a>
+              </li>
+            ))}
+            {resolvedCvHref && (
+              <li class="pt-2 mt-1 border-t border-stone-100">
+                <a
+                  href={resolvedCvHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="block nav-link text-[#294523] font-medium"
+                >
+                  ↓ Download CV
+                </a>
+              </li>
+            )}
+          </ul>
+        </div>
+      </nav>
+    </header>
+
+    <!-- ═══════════════════════════════════════════════════
+         MAIN CONTENT SLOT
+         ═══════════════════════════════════════════════════ -->
+    <main id="main-content" class="pt-16">
+      <slot />
+    </main>
+
+    <!-- ═══════════════════════════════════════════════════
+         FOOTER
+         ═══════════════════════════════════════════════════ -->
+    <footer class="bg-stone-900 text-stone-400 mt-24">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-12">
+
+          <!-- Branding column -->
+          <div class="sm:col-span-2 lg:col-span-1">
+            <a href="/" class="flex items-center gap-2 mb-4 group w-fit">
+              <span class="flex items-center justify-center w-8 h-8 rounded-sm bg-[#294523] text-green-200">
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path d="M10 1.5C6.96 1.5 4.5 4.46 4.5 8.25c0 2.93 1.72 5.44 4.25 6.52V17h2.5v-2.23c2.53-1.08 4.25-3.59 4.25-6.52C15.5 4.46 13.04 1.5 10 1.5z"/>
+                </svg>
+              </span>
+              <span class="font-serif font-semibold text-white text-sm">Evergreen Archaeology</span>
+            </a>
+            <p class="text-stone-400 text-sm leading-relaxed">
+              Professional Cultural Resource Management and archaeological consulting across the Pacific Northwest.
+            </p>
+          </div>
+
+          <!-- Services column -->
+          <div>
+            <h3 class="text-white text-xs font-semibold uppercase tracking-widest mb-4">Services</h3>
+            <ul class="space-y-2 text-sm" role="list">
+              {[
+                'Section 106 Compliance',
+                'Archaeological Surveys',
+                'Cultural Resource Assessments',
+                'Archaeological Monitoring',
+                'Phase III Data Recovery',
+                'NHPA & NEPA Consulting',
+              ].map((s) => (
+                <li>
+                  <a href="/#services" class="hover:text-white transition-colors">{s}</a>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <!-- Navigation column -->
+          <div>
+            <h3 class="text-white text-xs font-semibold uppercase tracking-widest mb-4">Navigation</h3>
+            <ul class="space-y-2 text-sm" role="list">
+              {navLinks.map(({ href, label }) => (
+                <li>
+                  <a href={href} class="hover:text-white transition-colors">{label}</a>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <!-- Contact column -->
+          <div>
+            <h3 class="text-white text-xs font-semibold uppercase tracking-widest mb-4">Contact</h3>
+            <address class="not-italic text-sm space-y-2">
+              {footerAddress && <p>{footerAddress}</p>}
+              <p>
+                <a
+                  href={`mailto:${footerEmail}`}
+                  class="hover:text-white transition-colors break-all"
+                >
+                  {footerEmail}
+                </a>
+              </p>
+            </address>
+            {resolvedCvHref && (
+              <div class="mt-5">
+                <a
+                  href={resolvedCvHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="inline-flex items-center gap-1.5 text-xs font-medium border border-stone-600 hover:border-white hover:text-white px-3 py-2 rounded-sm transition-colors"
+                >
+                  <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                  </svg>
+                  Download CV
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <!-- Bottom bar -->
+        <div class="border-t border-stone-800 mt-12 pt-8 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs text-stone-600">
+          <p>© {new Date().getFullYear()} Evergreen Archaeology. All rights reserved.</p>
+          {import.meta.env.DEV && (
+            <a
+              href="/keystatic"
+              class="hover:text-stone-400 transition-colors"
+              aria-label="Admin panel — development only"
+            >
+              Admin ↗
+            </a>
+          )}
+        </div>
+      </div>
+    </footer>
+
+    <!-- ── Mobile menu toggle script ── -->
+    <script>
+      const btn    = document.getElementById('mobile-menu-btn');
+      const menu   = document.getElementById('mobile-menu');
+      const open   = document.getElementById('icon-open');
+      const close  = document.getElementById('icon-close');
+
+      btn?.addEventListener('click', () => {
+        const expanded = btn.getAttribute('aria-expanded') === 'true';
+        btn.setAttribute('aria-expanded', String(!expanded));
+        menu?.classList.toggle('hidden');
+        open?.classList.toggle('hidden');
+        close?.classList.toggle('hidden');
+      });
+
+      // Close menu when a link is tapped
+      menu?.querySelectorAll('a').forEach((link) => {
+        link.addEventListener('click', () => {
+          menu.classList.add('hidden');
+          open?.classList.remove('hidden');
+          close?.classList.add('hidden');
+          btn?.setAttribute('aria-expanded', 'false');
+        });
+      });
+    </script>
+  </body>
+</html>

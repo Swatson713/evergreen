@@ -1,0 +1,141 @@
+/* ============================================================
+   Evergreen Archaeology — Global Styles
+   Built with Tailwind CSS v3 via @astrojs/tailwind
+   ============================================================ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Base Layer ─────────────────────────────────────────────── */
+@layer base {
+  :root {
+    --color-brand: #294523;        /* forest-800 */
+    --color-brand-light: #568a42;  /* forest-500 */
+    --color-surface: #fafaf9;      /* stone-50   */
+  }
+
+  html {
+    @apply scroll-smooth antialiased;
+  }
+
+  body {
+    @apply bg-stone-50 text-stone-800 font-sans;
+  }
+
+  /* Focus ring — accessible, on-brand */
+  :focus-visible {
+    @apply outline-none ring-2 ring-offset-2 ring-[#294523];
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif;
+  }
+
+  img {
+    @apply h-auto max-w-full;
+  }
+}
+
+/* ── Component Layer ────────────────────────────────────────── */
+@layer components {
+
+  /* --- Buttons --- */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2
+           bg-[#294523] hover:bg-[#325629] active:bg-[#1e3319]
+           text-white font-medium text-sm
+           px-6 py-3 rounded-sm
+           transition-colors duration-200
+           focus-visible:ring-[#294523];
+  }
+
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2
+           border border-white/60 hover:bg-white/10 active:bg-white/20
+           text-white font-medium text-sm
+           px-6 py-3 rounded-sm
+           transition-colors duration-200;
+  }
+
+  .btn-outline-dark {
+    @apply inline-flex items-center justify-center gap-2
+           border border-[#294523] hover:bg-[#294523] hover:text-white
+           text-[#294523] font-medium text-sm
+           px-6 py-3 rounded-sm
+           transition-colors duration-200;
+  }
+
+  /* --- Section wrapper --- */
+  .section-container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  /* --- Section heading pair --- */
+  .section-eyebrow {
+    @apply text-[#568a42] text-xs font-semibold uppercase tracking-widest mb-2;
+  }
+
+  .section-heading {
+    @apply font-serif text-3xl md:text-4xl font-bold text-stone-900 leading-tight;
+  }
+
+  /* --- Card hover lift --- */
+  .card-hover {
+    @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-xl;
+  }
+
+  /* --- Nav link --- */
+  /* Default: subtle hover; no background tint for section-anchor items */
+  .nav-link {
+    @apply relative px-3 py-2 text-sm font-medium
+           text-stone-500 hover:text-[#294523]
+           transition-colors duration-150;
+  }
+
+  /* Active page only — solid underline bar, stronger text */
+  .nav-link-active {
+    @apply relative px-3 py-2 text-sm font-semibold
+           text-[#294523];
+  }
+
+  /* Green underline drawn with a pseudo-element so it sits on the nav baseline */
+  .nav-link-active::after {
+    content: '';
+    @apply absolute bottom-0 left-3 right-3 h-0.5 bg-[#294523] rounded-full;
+  }
+}
+
+/* ── Utilities ─────────────────────────────────────────────── */
+@layer utilities {
+  /* Offset anchor scroll targets so content clears the 64px fixed nav */
+  .scroll-offset {
+    scroll-margin-top: 4rem;
+  }
+
+  /* Hero overlay gradient */
+  .hero-overlay {
+    background: linear-gradient(
+      to bottom,
+      rgba(15, 30, 13, 0.55) 0%,
+      rgba(15, 30, 13, 0.70) 60%,
+      rgba(15, 30, 13, 0.85) 100%
+    );
+  }
+
+  /* Aspect ratio shim for older browsers */
+  .aspect-4\/3 {
+    aspect-ratio: 4 / 3;
+  }
+
+  /* Smooth image zoom on card hover */
+  .img-zoom {
+    @apply overflow-hidden;
+  }
+  .img-zoom img {
+    @apply transition-transform duration-500 ease-out;
+  }
+  .img-zoom:hover img {
+    @apply scale-105;
+  }
+}

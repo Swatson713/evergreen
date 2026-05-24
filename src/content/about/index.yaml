@@ -1,0 +1,17 @@
+eyebrow: "About the Firm"
+heading: "Field-Tested Expertise. Collaborative Practice."
+paragraphs:
+  - "Evergreen Archaeology is a Pacific Northwest–based cultural resource management firm providing rigorous, scientifically grounded archaeological services to federal agencies, tribal governments, municipalities, and private sector clients."
+  - "Our approach combines thorough field methodology with deep regulatory knowledge — ensuring that each project meets the highest standards of professional practice while remaining responsive to client schedules and budgets."
+  - "We are committed to meaningful consultation with Native American tribes and descendant communities, recognizing that responsible CRM work requires relationship-building alongside technical excellence."
+photo: ~
+photoAlt: ~
+credentials:
+  - abbr: "RPA"
+    label: "Register of Professional Archaeologists"
+  - abbr: "NHPA"
+    label: "Section 106 Specialist"
+  - abbr: "NEPA"
+    label: "Environmental Review"
+  - abbr: "PNW"
+    label: "Pacific Northwest Focus"

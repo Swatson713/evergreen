@@ -1,0 +1,370 @@
+---
+/**
+ * projects/index.astro — Full project portfolio listing
+ *
+ * Displays all Keystatic projects in a filterable grid.
+ * Linked from nav and from the homepage "View all projects" CTA.
+ */
+import Layout from '../../layouts/Layout.astro';
+import { createReader } from '@keystatic/core/reader';
+import keystaticConfig from '../../../keystatic.config';
+
+const reader = createReader(process.cwd(), keystaticConfig);
+const rawProjects = await reader.collections.projects.all();
+
+// Sort: featured first, then by date descending
+const projects = rawProjects.sort((a, b) => {
+  if (a.entry.featured && !b.entry.featured) return -1;
+  if (!a.entry.featured && b.entry.featured) return 1;
+  const da = a.entry.date ?? '';
+  const db = b.entry.date ?? '';
+  return db.localeCompare(da);
+});
+
+// Pull out the top featured project for the hero card
+const featuredProject = projects.find(p => p.entry.featured) ?? null;
+const gridProjects = featuredProject
+  ? projects.filter(p => p.slug !== featuredProject.slug)
+  : projects;
+
+// All unique project types for filter UI
+const allTypes = [...new Set(
+  projects.map(p => p.entry.projectType).filter(Boolean)
+)] as string[];
+
+// Stats for header strip
+const typeCount = allTypes.length;
+
+const typeLabels: Record<string, string> = {
+  'phase-i-survey':          'Phase I Survey',
+  'phase-ii-evaluation':     'Phase II Evaluation',
+  'phase-iii-data-recovery':  'Phase III Data Recovery',
+  'section-106':              'Section 106',
+  'monitoring':               'Monitoring',
+  'cra':                      'CRA',
+  'other':                    'Other',
+};
+---
+
+<Layout
+  title="Field Projects"
+  description="Browse Evergreen Archaeology's portfolio of cultural resource management and archaeological survey projects throughout the Pacific Northwest."
+>
+
+  <!-- ══════════════════════════════════════════════════════
+       PAGE HEADER
+       ══════════════════════════════════════════════════════ -->
+  <section class="bg-[#294523] text-white pt-24 pb-0" aria-label="Page header">
+    <div class="section-container">
+
+      <!-- Title block -->
+      <div class="py-14 max-w-2xl">
+        <p class="section-eyebrow text-green-300">Portfolio</p>
+        <h1 class="font-serif text-4xl md:text-5xl font-bold text-white mt-1 mb-4">
+          Field Projects
+        </h1>
+        <p class="text-green-100/75 text-lg leading-relaxed">
+          A selection of archaeological surveys, cultural resource assessments, and compliance projects completed across the Pacific Northwest.
+        </p>
+      </div>
+
+      <!-- Stats strip -->
+      {projects.length > 0 && (
+        <div class="border-t border-white/15 grid grid-cols-2 sm:grid-cols-3 divide-x divide-white/15">
+          <div class="py-6 px-6 first:pl-0">
+            <p class="font-serif text-3xl font-bold text-white">{projects.length}</p>
+            <p class="text-green-300/80 text-xs uppercase tracking-widest mt-0.5">Projects Completed</p>
+          </div>
+          <div class="py-6 px-6">
+            <p class="font-serif text-3xl font-bold text-white">{typeCount}</p>
+            <p class="text-green-300/80 text-xs uppercase tracking-widest mt-0.5">Service Types</p>
+          </div>
+          <div class="py-6 px-6 hidden sm:block">
+            <p class="font-serif text-xl font-bold text-white leading-tight">Pacific<br/>Northwest</p>
+            <p class="text-green-300/80 text-xs uppercase tracking-widest mt-0.5">Primary Region</p>
+          </div>
+        </div>
+      )}
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════════════════════════════
+       FEATURED HERO CARD
+       ══════════════════════════════════════════════════════ -->
+  {featuredProject && (
+    <section class="bg-stone-100 py-10" aria-label="Featured project">
+      <div class="section-container">
+        <p class="text-[#568a42] text-xs font-semibold uppercase tracking-widest mb-4">Featured Project</p>
+        <a
+          href={`/projects/${featuredProject.slug}`}
+          class="group block bg-white border border-stone-200 rounded-sm overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300"
+          aria-label={`View featured project: ${featuredProject.entry.title}`}
+        >
+          <div class="grid grid-cols-1 lg:grid-cols-5">
+
+            <!-- Image (3/5 width on large screens) -->
+            <div class="lg:col-span-3 img-zoom aspect-video lg:aspect-auto lg:min-h-[380px] bg-stone-200">
+              {featuredProject.entry.coverImage ? (
+                <img
+                  src={featuredProject.entry.coverImage}
+                  alt={`Cover photo for ${featuredProject.entry.title}`}
+                  class="w-full h-full object-cover"
+                  loading="eager"
+                  decoding="async"
+                />
+              ) : (
+                <div class="w-full h-full min-h-[280px] flex items-center justify-center bg-[#294523]/10">
+                  <svg class="w-12 h-12 text-[#294523]/30" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5z"/>
+                  </svg>
+                </div>
+              )}
+            </div>
+
+            <!-- Details (2/5 width) -->
+            <div class="lg:col-span-2 flex flex-col justify-between p-8 lg:p-10">
+              <div>
+                <!-- Badges -->
+                <div class="flex flex-wrap gap-2 mb-5">
+                  <span class="inline-block bg-amber-100 text-amber-700 text-xs font-semibold px-3 py-1 rounded-full">
+                    Featured
+                  </span>
+                  {featuredProject.entry.projectType && featuredProject.entry.projectType !== 'other' && (
+                    <span class="inline-block bg-[#294523]/10 text-[#294523] text-xs font-medium px-3 py-1 rounded-full">
+                      {typeLabels[featuredProject.entry.projectType] ?? featuredProject.entry.projectType}
+                    </span>
+                  )}
+                </div>
+
+                <h2 class="font-serif font-bold text-2xl lg:text-3xl text-stone-900 leading-snug mb-3 group-hover:text-[#294523] transition-colors">
+                  {featuredProject.entry.title}
+                </h2>
+
+                {featuredProject.entry.location && (
+                  <p class="text-[#568a42] text-xs font-semibold uppercase tracking-wide mb-4">
+                    {featuredProject.entry.location}
+                  </p>
+                )}
+
+                {featuredProject.entry.summary && (
+                  <p class="text-stone-500 text-sm leading-relaxed line-clamp-4">
+                    {featuredProject.entry.summary}
+                  </p>
+                )}
+              </div>
+
+              <div class="flex items-center justify-between mt-8 pt-6 border-t border-stone-100">
+                {featuredProject.entry.date && (
+                  <time
+                    datetime={featuredProject.entry.date}
+                    class="text-stone-400 text-xs"
+                  >
+                    {new Date(featuredProject.entry.date + 'T00:00:00').toLocaleDateString('en-US', {
+                      year: 'numeric', month: 'long',
+                    })}
+                  </time>
+                )}
+                <span class="inline-flex items-center gap-1.5 text-[#294523] text-sm font-semibold group-hover:underline ml-auto">
+                  View project
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                  </svg>
+                </span>
+              </div>
+            </div>
+          </div>
+        </a>
+      </div>
+    </section>
+  )}
+
+
+  <!-- ══════════════════════════════════════════════════════
+       FILTER + GRID
+       ══════════════════════════════════════════════════════ -->
+  <section class="py-16 bg-stone-50" aria-label="Projects listing">
+    <div class="section-container">
+
+      <!-- Section label + filter tabs -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-10">
+        <h2 class="font-serif text-2xl font-bold text-stone-900">
+          {featuredProject ? 'All Projects' : 'Projects'}
+          {projects.length > 0 && (
+            <span class="text-stone-400 font-normal text-lg ml-2">({projects.length})</span>
+          )}
+        </h2>
+
+        {allTypes.length > 1 && (
+          <div class="flex flex-wrap gap-2" id="type-filters" role="group" aria-label="Filter by project type">
+            <button data-filter="all" class="filter-btn active text-sm font-medium px-4 py-2 rounded-sm border transition-colors">
+              All
+            </button>
+            {allTypes.map((type) => (
+              <button
+                data-filter={type}
+                class="filter-btn text-sm font-medium px-4 py-2 rounded-sm border transition-colors"
+              >
+                {typeLabels[type] ?? type}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {projects.length === 0 ? (
+        <!-- Empty state -->
+        <div class="text-center py-28 border-2 border-dashed border-stone-200 rounded-sm bg-white">
+          <div class="w-16 h-16 rounded-full bg-stone-100 flex items-center justify-center mx-auto mb-5">
+            <svg class="w-8 h-8 text-stone-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/>
+            </svg>
+          </div>
+          <p class="text-stone-600 font-semibold mb-1">No projects added yet.</p>
+          <p class="text-stone-400 text-sm max-w-xs mx-auto">
+            Add your first project via the
+            <a href="/keystatic" class="text-[#294523] underline hover:no-underline">Keystatic admin</a>
+            — it'll appear here automatically.
+          </p>
+        </div>
+      ) : (
+        <div
+          id="projects-grid"
+          class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+          aria-label="Projects grid"
+        >
+          {gridProjects.map(({ slug, entry }) => (
+            <article class="card-hover group" data-type={entry.projectType ?? 'other'}>
+              <a
+                href={`/projects/${slug}`}
+                class="block bg-white rounded-sm overflow-hidden shadow-sm border border-stone-200 h-full"
+                aria-label={`View project: ${entry.title}`}
+              >
+                <!-- Thumbnail -->
+                <div class="img-zoom aspect-video bg-stone-100">
+                  {entry.coverImage ? (
+                    <img
+                      src={entry.coverImage}
+                      alt={`Cover photo for ${entry.title}`}
+                      class="w-full h-full object-cover"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  ) : (
+                    <div class="w-full h-full flex flex-col items-center justify-center bg-[#294523]/5 text-stone-300">
+                      <svg class="w-8 h-8 mb-2" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/>
+                      </svg>
+                      <span class="text-xs">No photo</span>
+                    </div>
+                  )}
+                </div>
+
+                <!-- Card body -->
+                <div class="p-5">
+                  <div class="flex flex-wrap items-center gap-x-2 gap-y-1 mb-2">
+                    {entry.projectType && entry.projectType !== 'other' && (
+                      <span class="inline-block bg-[#294523]/10 text-[#294523] text-xs font-medium px-2 py-0.5 rounded-full">
+                        {typeLabels[entry.projectType] ?? entry.projectType}
+                      </span>
+                    )}
+                  </div>
+
+                  <h2 class="font-serif font-semibold text-stone-900 text-lg leading-snug mb-1 group-hover:text-[#294523] transition-colors">
+                    {entry.title}
+                  </h2>
+
+                  {entry.location && (
+                    <p class="text-[#568a42] text-xs font-medium uppercase tracking-wide mb-2">
+                      {entry.location}
+                    </p>
+                  )}
+
+                  {entry.summary && (
+                    <p class="text-stone-500 text-sm leading-relaxed line-clamp-2 mb-3">
+                      {entry.summary}
+                    </p>
+                  )}
+
+                  <div class="flex items-center justify-between pt-3 border-t border-stone-100">
+                    {entry.date ? (
+                      <time datetime={entry.date} class="text-stone-400 text-xs">
+                        {new Date(entry.date + 'T00:00:00').toLocaleDateString('en-US', {
+                          year: 'numeric', month: 'long',
+                        })}
+                      </time>
+                    ) : <span />}
+                    <span class="text-[#294523] text-xs font-medium group-hover:underline ml-auto">
+                      View →
+                    </span>
+                  </div>
+                </div>
+              </a>
+            </article>
+          ))}
+        </div>
+      )}
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════════════════════════════
+       CONTACT CTA
+       ══════════════════════════════════════════════════════ -->
+  <section class="bg-white border-t border-stone-200 py-20" aria-label="Contact call to action">
+    <div class="section-container text-center max-w-2xl mx-auto">
+      <p class="section-eyebrow">Work With Us</p>
+      <h2 class="section-heading mb-4">Have a Project in Mind?</h2>
+      <p class="text-stone-500 text-base leading-relaxed mb-8">
+        Whether you need a Phase I survey, Section 106 consultation, or a full CRM plan — we'd love to hear about your project.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-3 justify-center">
+        <a href="/#contact" class="btn-primary px-8 py-3">Get in Touch</a>
+        <a href="/" class="btn-outline-dark px-8 py-3">Back to Home</a>
+      </div>
+    </div>
+  </section>
+
+</Layout>
+
+<!-- Filter interaction -->
+<style>
+  .filter-btn {
+    background: white;
+    color: rgb(87 83 78);
+    border-color: rgb(214 211 209);
+  }
+  .filter-btn:hover {
+    border-color: #294523;
+    color: #294523;
+  }
+  .filter-btn.active {
+    background: #294523;
+    color: white;
+    border-color: #294523;
+  }
+  .project-hidden {
+    display: none;
+  }
+</style>
+
+<script>
+  const buttons = document.querySelectorAll<HTMLButtonElement>('.filter-btn');
+  const cards   = document.querySelectorAll<HTMLElement>('#projects-grid article');
+
+  buttons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const filter = btn.dataset.filter ?? 'all';
+      buttons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      cards.forEach((card) => {
+        const type = card.dataset.type ?? 'other';
+        if (filter === 'all' || type === filter) {
+          card.classList.remove('project-hidden');
+        } else {
+          card.classList.add('project-hidden');
+        }
+      });
+    });
+  });
+</script>

@@ -1,0 +1,441 @@
+---
+/**
+ * projects/[slug].astro — Individual project detail page
+ *
+ * Route: /projects/:slug
+ * Rendered statically at build time via getStaticPaths().
+ * Reads data from Keystatic using the reader API.
+ *
+ * Layout:
+ *  - Full-width cover image hero
+ *  - Project metadata strip (date, location, type)
+ *  - Summary / content statement
+ *  - Photo gallery grid
+ *  - Back / related navigation
+ */
+import Layout from '../../layouts/Layout.astro';
+import { createReader } from '@keystatic/core/reader';
+import keystaticConfig from '../../../keystatic.config';
+
+// ── Static path generation ───────────────────────────────────────────────────
+// One reader, one read — siblings are threaded through props so we never
+// call createReader a second time in the page frontmatter.
+export async function getStaticPaths() {
+  const reader   = createReader(process.cwd(), keystaticConfig);
+  const projects = await reader.collections.projects.all();
+
+  return projects.map(({ slug, entry }, index) => ({
+    params: { slug },
+    props: {
+      slug,
+      entry,
+      prevSlug:  index > 0                    ? projects[index - 1].slug          : null,
+      prevTitle: index > 0                    ? projects[index - 1].entry.title   : null,
+      nextSlug:  index < projects.length - 1  ? projects[index + 1].slug          : null,
+      nextTitle: index < projects.length - 1  ? projects[index + 1].entry.title   : null,
+    },
+  }));
+}
+
+// ── Page props ───────────────────────────────────────────────────────────────
+// caption / location / summary are optional text fields in Keystatic →
+// they return null when the admin leaves them blank.
+interface GalleryItem {
+  image:   string;        // isRequired: true in schema
+  caption: string | null; // isRequired: false
+}
+
+interface ProjectEntry {
+  title:       string;
+  date:        string | null;
+  location:    string | null; // optional field
+  projectType: string;        // has a defaultValue
+  summary:     string | null; // optional field
+  coverImage:  string | null;
+  gallery:     GalleryItem[];
+  featured:    boolean;
+}
+
+interface Props {
+  slug:      string;
+  entry:     ProjectEntry;
+  prevSlug:  string | null;
+  prevTitle: string | null;
+  nextSlug:  string | null;
+  nextTitle: string | null;
+}
+
+const { slug, entry, prevSlug, prevTitle, nextSlug, nextTitle } = Astro.props as Props;
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+const typeLabels: Record<string, string> = {
+  'phase-i-survey':          'Phase I Survey',
+  'phase-ii-evaluation':     'Phase II Evaluation',
+  'phase-iii-data-recovery': 'Phase III Data Recovery',
+  'section-106':             'Section 106 Compliance',
+  'monitoring':              'Archaeological Monitoring',
+  'cra':                     'Cultural Resource Assessment',
+  'other':                   'Archaeological Project',
+};
+
+const projectTypeLabel = typeLabels[entry.projectType] ?? 'Archaeological Project';
+
+const formattedDate = entry.date
+  ? new Date(entry.date + 'T00:00:00').toLocaleDateString('en-US', {
+      year: 'numeric', month: 'long', day: 'numeric',
+    })
+  : null;
+
+// Gather gallery images — guard against null image/caption from optional fields.
+const galleryImages: { src: string; caption: string }[] = [];
+if (Array.isArray(entry.gallery)) {
+  for (const item of entry.gallery) {
+    if (item?.image) {
+      galleryImages.push({ src: item.image, caption: item.caption ?? '' });
+    }
+  }
+}
+---
+
+<Layout
+  title={entry.title}
+  description={entry.summary ?? `${entry.title} — archaeological project by Evergreen Archaeology in ${entry.location ?? 'the Pacific Northwest'}.`}
+  image={entry.coverImage ?? undefined}
+>
+
+  <!-- ── Breadcrumb nav ───────────────────────────────────── -->
+  <nav
+    class="fixed top-16 left-0 right-0 z-40 bg-white/80 backdrop-blur-sm border-b border-stone-100 py-2"
+    aria-label="Breadcrumb"
+  >
+    <ol class="section-container flex items-center gap-2 text-xs text-stone-400" role="list">
+      <li><a href="/" class="hover:text-stone-700 transition-colors">Home</a></li>
+      <li aria-hidden="true"><span>›</span></li>
+      <li><a href="/projects" class="hover:text-stone-700 transition-colors">Projects</a></li>
+      <li aria-hidden="true"><span>›</span></li>
+      <li class="text-stone-700 font-medium truncate max-w-[200px]" aria-current="page">
+        {entry.title}
+      </li>
+    </ol>
+  </nav>
+
+  <!-- ── Cover image hero ─────────────────────────────────── -->
+  <section
+    class="relative h-[60vh] min-h-[380px] max-h-[640px] mt-[88px] bg-stone-800 overflow-hidden"
+    aria-label="Project cover image"
+  >
+    {entry.coverImage ? (
+      <img
+        src={entry.coverImage}
+        alt={`Cover photo for ${entry.title}`}
+        class="w-full h-full object-cover object-center"
+        loading="eager"
+        fetchpriority="high"
+      />
+    ) : (
+      <div
+        class="w-full h-full flex items-center justify-center"
+        style="background: linear-gradient(135deg, #1e3319 0%, #294523 50%, #3a5c2e 100%);"
+      >
+        <svg class="w-16 h-16 text-green-700" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5z"/>
+        </svg>
+      </div>
+    )}
+    <!-- Gradient vignette at bottom -->
+    <div class="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-stone-50 to-transparent" aria-hidden="true"></div>
+  </section>
+
+  <!-- ── Main content ──────────────────────────────────────── -->
+  <article class="py-12 bg-stone-50" aria-label="Project details">
+    <div class="section-container">
+      <div class="max-w-4xl mx-auto">
+
+        <!-- Metadata strip -->
+        <div class="flex flex-wrap items-center gap-3 mb-6">
+          <span class="inline-block bg-[#294523]/10 text-[#294523] text-xs font-semibold uppercase tracking-wide px-3 py-1.5 rounded-full">
+            {projectTypeLabel}
+          </span>
+          {entry.featured && (
+            <span class="inline-block bg-amber-100 text-amber-700 text-xs font-semibold px-3 py-1.5 rounded-full">
+              Featured
+            </span>
+          )}
+        </div>
+
+        <!-- Title -->
+        <h1 class="font-serif font-bold text-3xl sm:text-4xl md:text-5xl text-stone-900 leading-tight mb-6">
+          {entry.title}
+        </h1>
+
+        <!-- Location + date row -->
+        <dl class="flex flex-wrap gap-x-8 gap-y-3 mb-10 pb-10 border-b border-stone-200">
+          {entry.location && (
+            <div>
+              <dt class="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-0.5">Location</dt>
+              <dd class="text-stone-700 text-sm font-medium">{entry.location}</dd>
+            </div>
+          )}
+          {formattedDate && (
+            <div>
+              <dt class="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-0.5">Date</dt>
+              <dd class="text-stone-700 text-sm font-medium">
+                <time datetime={entry.date ?? ''}>{formattedDate}</time>
+              </dd>
+            </div>
+          )}
+          <div>
+            <dt class="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-0.5">Service Type</dt>
+            <dd class="text-stone-700 text-sm font-medium">{projectTypeLabel}</dd>
+          </div>
+        </dl>
+
+        <!-- Summary / project statement -->
+        {entry.summary ? (
+          <section aria-label="Project summary" class="mb-14">
+            <h2 class="font-serif text-xl font-semibold text-stone-900 mb-4">Project Overview</h2>
+            <div class="prose-custom">
+              {entry.summary.split('\n').filter(Boolean).map((para) => (
+                <p class="text-stone-600 text-base leading-relaxed mb-4">{para}</p>
+              ))}
+            </div>
+          </section>
+        ) : (
+          <p class="text-stone-400 italic text-sm mb-14">
+            No project summary provided. Add a summary in the Keystatic admin.
+          </p>
+        )}
+
+        <!-- Photo gallery ─────────────────────────────────── -->
+        {galleryImages.length > 0 && (
+          <section aria-label="Photo gallery" class="mb-14">
+            <h2 class="font-serif text-xl font-semibold text-stone-900 mb-6">Field Photographs</h2>
+
+            <!-- Masonry-style grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" id="gallery-grid">
+              {galleryImages.map((photo, i) => (
+                <figure
+                  class="group relative overflow-hidden rounded-sm bg-stone-100 shadow-sm cursor-pointer"
+                  data-gallery-index={i}
+                >
+                  <div class="img-zoom aspect-4/3">
+                    <img
+                      src={photo.src}
+                      alt={photo.caption || `Field photograph ${i + 1} from ${entry.title}`}
+                      class="w-full h-full object-cover"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </div>
+                  <!-- Caption overlay on hover -->
+                  {photo.caption && (
+                    <figcaption class="absolute bottom-0 left-0 right-0 bg-stone-900/80 text-white text-xs p-3 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                      {photo.caption}
+                    </figcaption>
+                  )}
+                </figure>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <!-- Lightbox modal (no-JS graceful fallback: just hides) -->
+        <div
+          id="lightbox"
+          class="fixed inset-0 z-50 bg-stone-950/95 flex items-center justify-center p-4 hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Photo lightbox"
+        >
+          <button
+            id="lightbox-close"
+            type="button"
+            class="absolute top-4 right-5 text-white/70 hover:text-white p-1 rounded-sm"
+            aria-label="Close lightbox"
+          >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+          <button
+            id="lb-prev"
+            type="button"
+            class="absolute left-3 sm:left-6 text-white/60 hover:text-white"
+            aria-label="Previous photo"
+          >
+            <svg class="w-9 h-9" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+            </svg>
+          </button>
+          <div class="max-w-5xl max-h-full flex flex-col items-center gap-3">
+            <img
+              id="lightbox-img"
+              src=""
+              alt=""
+              class="max-h-[80vh] max-w-full object-contain rounded-sm shadow-2xl"
+            />
+            <p id="lightbox-caption" class="text-stone-300 text-sm text-center max-w-lg"></p>
+          </div>
+          <button
+            id="lb-next"
+            type="button"
+            class="absolute right-3 sm:right-6 text-white/60 hover:text-white"
+            aria-label="Next photo"
+          >
+            <svg class="w-9 h-9" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- ── Contact CTA ─────────────────────────────────── -->
+        <div class="bg-stone-100 border border-stone-200 rounded-sm p-8 mb-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+          <div>
+            <p class="text-[#568a42] text-xs font-semibold uppercase tracking-widest mb-1">Work With Us</p>
+            <h3 class="font-serif font-bold text-xl text-stone-900 mb-1">Interested in This Type of Work?</h3>
+            <p class="text-stone-500 text-sm leading-relaxed max-w-md">
+              Reach out to discuss your project — we typically respond within one business day.
+            </p>
+          </div>
+          <a
+            href="/#contact"
+            class="btn-primary shrink-0 px-7 py-3"
+          >
+            Start a Conversation
+          </a>
+        </div>
+
+        <!-- Back link + sibling navigation -->
+        <nav
+          class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 pt-10 border-t border-stone-200"
+          aria-label="Project navigation"
+        >
+          <a
+            href="/projects"
+            class="inline-flex items-center gap-1.5 text-sm text-stone-500 hover:text-[#294523] transition-colors"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+            </svg>
+            All projects
+          </a>
+
+          <div class="flex gap-6 text-sm">
+            {prevSlug && (
+              <a
+                href={`/projects/${prevSlug}`}
+                class="text-stone-500 hover:text-[#294523] transition-colors text-right"
+                aria-label={`Previous project: ${prevTitle}`}
+              >
+                ← <span class="underline underline-offset-2">{prevTitle}</span>
+              </a>
+            )}
+            {nextSlug && (
+              <a
+                href={`/projects/${nextSlug}`}
+                class="text-stone-500 hover:text-[#294523] transition-colors"
+                aria-label={`Next project: ${nextTitle}`}
+              >
+                <span class="underline underline-offset-2">{nextTitle}</span> →
+              </a>
+            )}
+          </div>
+        </nav>
+
+      </div>
+    </div>
+  </article>
+
+</Layout>
+
+<!-- Lightbox script — vanilla JS, zero dependencies -->
+<script>
+  interface PhotoData {
+    src: string;
+    caption: string;
+  }
+
+  // Gather all gallery photos from data attributes
+  const figures = document.querySelectorAll<HTMLElement>('[data-gallery-index]');
+  const photos: PhotoData[] = [];
+
+  // Pull the actual src/caption from each figure's img + figcaption
+  figures.forEach((fig) => {
+    const img     = fig.querySelector('img');
+    const caption = fig.querySelector('figcaption');
+    if (img) {
+      photos.push({
+        src:     img.src,
+        caption: caption?.textContent?.trim() ?? img.alt ?? '',
+      });
+    }
+  });
+
+  const lightbox     = document.getElementById('lightbox')!;
+  const lbImg        = document.getElementById('lightbox-img') as HTMLImageElement;
+  const lbCaption    = document.getElementById('lightbox-caption')!;
+  const lbClose      = document.getElementById('lightbox-close')!;
+  const lbPrev       = document.getElementById('lb-prev')!;
+  const lbNext       = document.getElementById('lb-next')!;
+
+  let currentIndex = 0;
+
+  function openLightbox(index: number) {
+    currentIndex = index;
+    const photo = photos[currentIndex];
+    lbImg.src       = photo.src;
+    lbImg.alt       = photo.caption;
+    lbCaption.textContent = photo.caption;
+    lightbox.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    lbClose.focus(); // focus the close button so keyboard users can immediately dismiss
+  }
+
+  function closeLightbox() {
+    lightbox.classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+
+  function showPrev() {
+    openLightbox((currentIndex - 1 + photos.length) % photos.length);
+  }
+
+  function showNext() {
+    openLightbox((currentIndex + 1) % photos.length);
+  }
+
+  // Open on figure click
+  figures.forEach((fig) => {
+    fig.addEventListener('click', () => {
+      const idx = parseInt(fig.dataset.galleryIndex ?? '0', 10);
+      openLightbox(idx);
+    });
+    // Keyboard accessibility
+    fig.setAttribute('tabindex', '0');
+    fig.setAttribute('role', 'button');
+    fig.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        const idx = parseInt(fig.dataset.galleryIndex ?? '0', 10);
+        openLightbox(idx);
+      }
+    });
+  });
+
+  lbClose.addEventListener('click', closeLightbox);
+  lbPrev.addEventListener('click',  showPrev);
+  lbNext.addEventListener('click',  showNext);
+
+  // Close on backdrop click
+  lightbox.addEventListener('click', (e) => {
+    if (e.target === lightbox) closeLightbox();
+  });
+
+  // Keyboard navigation
+  document.addEventListener('keydown', (e) => {
+    if (lightbox.classList.contains('hidden')) return;
+    if (e.key === 'Escape')      closeLightbox();
+    if (e.key === 'ArrowLeft')   showPrev();
+    if (e.key === 'ArrowRight')  showNext();
+  });
+</script>

@@ -1,0 +1,43 @@
+---
+/**
+ * 404.astro — Custom not-found page
+ *
+ * Astro automatically serves this for unmatched routes during `astro preview`.
+ * For GitHub Pages, add a `404.html` to the repository root (Astro builds it
+ * automatically from this file) and enable it in your Pages settings.
+ */
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout
+  title="Page Not Found"
+  description="The page you're looking for doesn't exist — Evergreen Archaeology."
+>
+  <section class="min-h-[70vh] flex items-center justify-center bg-stone-50 px-4">
+    <div class="text-center max-w-md mx-auto">
+
+      <!-- Large numeral -->
+      <p class="font-serif text-[8rem] leading-none font-bold text-stone-200 select-none" aria-hidden="true">
+        404
+      </p>
+
+      <h1 class="font-serif text-2xl font-semibold text-stone-900 mb-3 -mt-4">
+        Page not found
+      </h1>
+
+      <p class="text-stone-500 text-base leading-relaxed mb-8">
+        The page you're looking for has either moved or doesn't exist. Try heading back to the homepage or browsing our project portfolio.
+      </p>
+
+      <div class="flex flex-col sm:flex-row gap-3 justify-center">
+        <a href="/" class="btn-primary">
+          ← Back to home
+        </a>
+        <a href="/projects" class="btn-outline-dark">
+          View projects
+        </a>
+      </div>
+
+    </div>
+  </section>
+</Layout>
